@@ -49,7 +49,6 @@ Tables and queues can be deleted quickly, but domains take a long time to delete
 
 ## Roadmap
 
-- Unit tests for methods involving event grid domains.
 - Unit tests for controllers.
 - Add blob support.
 - Integration tests.

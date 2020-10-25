@@ -4,6 +4,7 @@ using Microsoft.Azure.Management.EventGrid.Models;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Rest;
 using Microsoft.Rest.Azure;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AzureUtilities.DataCleanup.DataLayer
@@ -34,28 +35,38 @@ namespace AzureUtilities.DataCleanup.DataLayer
         }
 
         public async Task DeleteDomainTopic(
+            EventGridManagementClient eventGridManagementClient,
             string resourceGroupName,
             string domainName,
-            string domainTopicName,
-            EventGridManagementClient eventGridManagementClient)
+            string domainTopicName)
         {
             await eventGridManagementClient.DomainTopics.DeleteWithHttpMessagesAsync(resourceGroupName, domainName, domainTopicName);
             return;
         }
 
-        public async Task<AzureOperationResponse<IPage<DomainTopic>>> GetDomainTopics(
-        string resourceGroupName,
-        string domainName,
-        EventGridManagementClient eventGridManagementClient)
+        public async Task<(List<string> domainTopicNames, string nextPageLink)> GetDomainTopics(
+            EventGridManagementClient eventGridManagementClient,
+            string resourceGroupName,
+            string domainName,
+            string nextPageLink = null)
         {
-            return await eventGridManagementClient.DomainTopics.ListByDomainWithHttpMessagesAsync(resourceGroupName, domainName);
-        }
+            AzureOperationResponse<IPage<DomainTopic>> result;
+            if (string.IsNullOrWhiteSpace(nextPageLink))
+            {
+                result = await eventGridManagementClient.DomainTopics.ListByDomainWithHttpMessagesAsync(resourceGroupName, domainName);
+            }
+            else
+            {
+                result = await eventGridManagementClient.DomainTopics.ListByDomainNextWithHttpMessagesAsync(nextPageLink);
+            }
 
-        public async Task<AzureOperationResponse<IPage<DomainTopic>>> GetDomainTopics(
-            string nextPageLink,
-            EventGridManagementClient eventGridManagementClient)
-        {
-            return await eventGridManagementClient.DomainTopics.ListByDomainNextWithHttpMessagesAsync(nextPageLink);
+            var domainTopcicNames = new List<string>();
+            foreach (DomainTopic domainTopic in result.Body)
+            {
+                domainTopcicNames.Add(domainTopic.Name);
+            }
+
+            return (domainTopcicNames, result.Body.NextPageLink);
         }
     }
 }

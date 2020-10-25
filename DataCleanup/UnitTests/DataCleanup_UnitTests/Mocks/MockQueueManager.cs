@@ -1,7 +1,6 @@
 ﻿using Azure;
 using Azure.Storage.Queues;
 using AzureUtilities.DataCleanup.Interfaces;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -18,10 +17,26 @@ namespace DataCleanup_UnitTests.Mocks
             "queue3"
         };
         public List<string> DeletedQueues = new List<string>();
+        public List<string> SentMessages = new List<string>();
+
+        public Task CreateIfNotExistsAsync(QueueClient client)
+        {
+            if (ThrowException)
+            {
+                throw new RequestFailedException(ExceptionMessage);
+            }
+
+            return Task.CompletedTask;
+        }
 
         public QueueClient CreateQueueClient(string storageConnectionString, string queueName)
         {
-            throw new NotImplementedException();
+            if (ThrowException)
+            {
+                throw new RequestFailedException(ExceptionMessage);
+            }
+
+            return new QueueClient(storageConnectionString, queueName);
         }
 
         public QueueServiceClient CreateQueueServiceClient(string storageConnectionString)
@@ -54,6 +69,18 @@ namespace DataCleanup_UnitTests.Mocks
             }
 
             return Task.FromResult(ReturnQueueList);
+        }
+
+        public Task SendMessageAsync(QueueClient client, string message)
+        {
+            if (ThrowException)
+            {
+                throw new RequestFailedException(ExceptionMessage);
+            }
+
+            SentMessages.Add(message);
+
+            return Task.CompletedTask;
         }
     }
 }

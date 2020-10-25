@@ -1,32 +1,81 @@
-﻿using AzureUtilities.DataCleanup.Interfaces;
+﻿using Azure;
+using AzureUtilities.DataCleanup.Interfaces;
 using Microsoft.Azure.Management.EventGrid;
-using Microsoft.Azure.Management.EventGrid.Models;
-using Microsoft.Rest.Azure;
-using System;
+using Microsoft.Rest;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace DataCleanup_UnitTests.Mocks
 {
     public class MockEventGridManager : IEventGridManager
     {
-        public Task DeleteDomainTopic(string resourceGroupName, string domainName, string domainTopicName, EventGridManagementClient eventGridManagementClient)
+        public bool ThrowExceptionOnGetClient = false;
+        public bool ThrowExceptionOnGetTopics = false;
+        public bool ThrowExceptionOnDelete = false;
+        public string ExceptionMessage = "Expected Exception Thrown";
+        public int TopicNameIndex = 0;
+        public List<string> DeletedDomainTopics = new List<string>();
+        public List<List<string>> ReturnDomainTopicNames = new List<List<string>>()
         {
-            throw new NotImplementedException();
+            new List<string>()
+            {
+                "domaintopic1",
+                "domaintopic2",
+                "domaintopic3"
+            }
+        };
+        
+        public Task DeleteDomainTopic(
+            EventGridManagementClient eventGridManagementClient,
+            string resourceGroupName,
+            string domainName,
+            string domainTopicName)
+        {
+            if (ThrowExceptionOnDelete)
+            {
+                throw new RequestFailedException(ExceptionMessage);
+            }
+
+            DeletedDomainTopics.Add(domainTopicName);
+
+            return Task.CompletedTask;
         }
 
-        public Task<AzureOperationResponse<IPage<DomainTopic>>> GetDomainTopics(string resourceGroupName, string domainName, EventGridManagementClient eventGridManagementClient)
+        public Task<(List<string> domainTopicNames, string nextPageLink)> GetDomainTopics(
+            EventGridManagementClient eventGridManagementClient,
+            string resourceGroupName,
+            string domainName,
+            string nextPageLink)
         {
-            throw new NotImplementedException();
+            if (ThrowExceptionOnGetTopics)
+            {
+                throw new RequestFailedException(ExceptionMessage);
+            }
+
+            TopicNameIndex++;
+            string returnNextPageLink = null;
+            if (ReturnDomainTopicNames.Count > TopicNameIndex)
+            {
+                returnNextPageLink = "Nextpage";
+            }
+
+
+            return Task.FromResult((ReturnDomainTopicNames[TopicNameIndex - 1], returnNextPageLink));
         }
 
-        public Task<AzureOperationResponse<IPage<DomainTopic>>> GetDomainTopics(string nextPageLink, EventGridManagementClient eventGridManagementClient)
+        public Task<EventGridManagementClient> GetEventGridManagementClient(
+            string azureSubscriptionId,
+            string azureServicePrincipalClientId,
+            string azureServicePrincipalClientKey,
+            string azureAuthenticationAuthority,
+            string azureManagemernResourceUrl)
         {
-            throw new NotImplementedException();
-        }
+            if (ThrowExceptionOnGetClient)
+            {
+                throw new RequestFailedException(ExceptionMessage);
+            }
 
-        public Task<EventGridManagementClient> GetEventGridManagementClient(string azureSubscriptionId, string azureServicePrincipalClientId, string azureServicePrincipalClientKey, string azureAuthenticationAuthority, string azureManagemernResourceUrl)
-        {
-            throw new NotImplementedException();
+            return Task.FromResult(new EventGridManagementClient(new TokenCredentials("token")));
         }
     }
 }

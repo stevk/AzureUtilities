@@ -22,6 +22,8 @@ namespace DataCleanup_UnitTests
         private readonly MockTableManager _tableManager = new MockTableManager();
         private readonly MockLogger<ServiceLayer> _log = new MockLogger<ServiceLayer>();
 
+        #region DeleteQueues
+
         #region DeleteQueues Helpers
 
         private static List<string> GetBasicQueueList()
@@ -68,6 +70,20 @@ namespace DataCleanup_UnitTests
                     return Task.CompletedTask;
                 });
 
+            // Used by PopulateDomainTopicQueue
+            queueManagerMock
+                .Setup(manager => manager.CreateQueueClient(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns((string storageConnectionString, string queueName) =>
+                {
+                    return new QueueClient(storageConnectionString, queueName);
+                });
+            queueManagerMock
+                .Setup(manager => manager.CreateIfNotExistsAsync(It.IsAny<QueueClient>()))
+                .Returns(Task.CompletedTask);
+            queueManagerMock
+                .Setup(manager => manager.SendMessageAsync(It.IsAny<QueueClient>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
             return (queueManagerMock, deletedQueueList);
         }
 
@@ -106,34 +122,42 @@ namespace DataCleanup_UnitTests
             };
         }
 
-        #endregion
-
-        #region DeleteQueues
-
-        // Example of testing without using Moq. Does not add additional code coverage.
-        [Theory]
-        [MemberData(nameof(GetQueueLists), MemberType = typeof(ServiceLayer_Tests))]
-        public async Task ServiceLayer_DeleteQueues_ShouldWork(List<string> queueList)
+        public static IEnumerable<object[]> GetMockQueueManagerWithException2()
         {
-            // Setup
-            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
-            _queueManager.ReturnQueueList = queueList;
-            ServiceLayer serviceLayer = new ServiceLayer(
-                _eventGridManager,
-                _queueManager,
-                _tableManager,
-                _log);
+            var exceptionMessage = "Expected exception";
 
-            // Act
-            await serviceLayer.DeleteQueues(parameters);
+            Mock<IQueueManager> queueManagerMock = GetMockQueueManager(GetBasicQueueList()).queueManagerMock;
+            queueManagerMock
+                .Setup(manager => manager.CreateQueueClient(It.IsAny<string>(), It.IsAny<string>()))
+                .Throws(new RequestFailedException(exceptionMessage));
+            yield return new object[]
+            {
+                queueManagerMock,
+                exceptionMessage
+            };
 
-            // Verify
-            _queueManager.DeletedQueues.Count.Should().Be(queueList?.Count ?? 0);
-            _queueManager.DeletedQueues.Should().BeEquivalentTo(queueList ?? new List<string>());
-            _log.Messages.Count.Should().Be(2);
-            _log.Messages[0].Message.Should().Be("Queue deletion starting.");
-            _log.Messages[1].Message.Should().Be($"Queue deletion completed! Removed {queueList?.Count ?? 0} queues.");
+            queueManagerMock = GetMockQueueManager(GetBasicQueueList()).queueManagerMock;
+            queueManagerMock
+                .Setup(manager => manager.CreateIfNotExistsAsync(It.IsAny<QueueClient>()))
+                .Throws(new RequestFailedException(exceptionMessage));
+            yield return new object[]
+            {
+                queueManagerMock,
+                exceptionMessage
+            };
+
+            queueManagerMock = GetMockQueueManager(GetBasicQueueList()).queueManagerMock;
+            queueManagerMock
+                .Setup(manager => manager.SendMessageAsync(It.IsAny<QueueClient>(), It.IsAny<string>()))
+                .Throws(new RequestFailedException(exceptionMessage));
+            yield return new object[]
+            {
+                queueManagerMock,
+                exceptionMessage
+            };
         }
+
+        #endregion
 
         [Theory]
         [MemberData(nameof(GetQueueLists), MemberType = typeof(ServiceLayer_Tests))]
@@ -157,7 +181,7 @@ namespace DataCleanup_UnitTests
             queueManagerMock.Verify();
             deletedQueueList.Count.Should().Be(queueList?.Count ?? 0);
             deletedQueueList.Should().BeEquivalentTo(queueList ?? new List<string>());
-            _log.Messages.Count.Should().Be(2);
+            _log.Messages.Should().HaveCount(2);
             _log.Messages[0].Message.Should().Be("Queue deletion starting.");
             _log.Messages[1].Message.Should().Be($"Queue deletion completed! Removed {queueList?.Count ?? 0} queues.");
         }
@@ -180,12 +204,14 @@ namespace DataCleanup_UnitTests
             act.Should().Throw<RequestFailedException>().WithMessage(exceptionMessage);
 
             // Verify
-            _log.Messages.Count.Should().Be(2);
+            _log.Messages.Should().HaveCount(2);
             _log.Messages[0].Message.Should().Be("Queue deletion starting.");
             _log.Messages[1].Message.Should().Be("Exception encountered in DeleteQueues method.");
         }
 
         #endregion
+
+        #region DeleteTables
 
         #region DeleteTables Helpers
 
@@ -276,8 +302,6 @@ namespace DataCleanup_UnitTests
 
         #endregion
 
-        #region DeleteTables
-
         [Theory]
         [MemberData(nameof(GetTableLists), MemberType = typeof(ServiceLayer_Tests))]
         public async Task ServiceLayer_DeleteTables_ShouldWork(List<CloudTable> tableList)
@@ -298,9 +322,9 @@ namespace DataCleanup_UnitTests
 
             // Verify
             tableManagerMock.Verify();
-            deletedTableList.Count.Should().Be(tableList?.Count ?? 0);
+            deletedTableList.Should().HaveCount(tableList?.Count ?? 0);
             deletedTableList.Should().BeEquivalentTo(tableList ?? new List<CloudTable>());
-            _log.Messages.Count.Should().Be(2);
+            _log.Messages.Should().HaveCount(2);
             _log.Messages[0].Message.Should().Be("Table deletion starting.");
             _log.Messages[1].Message.Should().Be($"Table deletion completed! Removed {tableList?.Count ?? 0} tables.");
         }
@@ -323,9 +347,181 @@ namespace DataCleanup_UnitTests
             act.Should().Throw<RequestFailedException>().WithMessage(exceptionMessage);
 
             // Verify
-            _log.Messages.Count.Should().Be(2);
+            _log.Messages.Should().HaveCount(2);
             _log.Messages[0].Message.Should().Be("Table deletion starting.");
             _log.Messages[1].Message.Should().Be("Exception encountered in DeleteTables method.");
+        }
+
+        #endregion
+
+        #region DeleteDomainTopic
+
+        [Fact]
+        public async Task ServiceLayer_DeleteDomainTopic_ShouldWork()
+        {
+            // Setup
+            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
+            parameters.DomainTopicName = "domaintopicname";
+
+            ServiceLayer serviceLayer = new ServiceLayer(
+                _eventGridManager,
+                _queueManager,
+                _tableManager,
+                _log);
+
+            // Act
+            await serviceLayer.DeleteDomainTopic(parameters);
+
+            // Verify
+            _log.Messages.Should().HaveCount(2);
+            _log.Messages[0].Message.Should().Be($"Deleting domain topic {parameters.DomainTopicName}");
+            _log.Messages[1].Message.Should().Be($"Domain topic deletion completed! {parameters.DomainTopicName}");
+        }
+
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public void ServiceLayer_DeleteDomainTopic_DataLayerException_ShouldRethrow(bool getClientThrowsException, bool deleteThrowsException)
+        {
+            // Setup
+            _eventGridManager.ThrowExceptionOnGetClient = getClientThrowsException;
+            _eventGridManager.ThrowExceptionOnDelete = deleteThrowsException;
+
+            ServiceLayer serviceLayer = new ServiceLayer(
+                _eventGridManager,
+                _queueManager,
+                _tableManager,
+                _log);
+
+            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
+            parameters.DomainTopicName = "domaintopicname";
+            Func<Task> act = async () => await serviceLayer.DeleteDomainTopic(parameters);
+
+            // Act
+            act.Should().Throw<RequestFailedException>().WithMessage(_eventGridManager.ExceptionMessage);
+
+            // Verify
+            _log.Messages.Should().HaveCount(2);
+            _log.Messages[0].Message.Should().Be($"Deleting domain topic {parameters.DomainTopicName}");
+            _log.Messages[1].Message.Should().Be("Exception encountered in DeleteDomainTopic method.");
+        }
+
+        #endregion
+
+        #region PopulateDomainTopicQueue
+
+        [Fact]
+        public async Task ServiceLayer_PopulateDomainTopicQueue_ShouldWork()
+        {
+            // Setup
+            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
+
+            ServiceLayer serviceLayer = new ServiceLayer(
+                _eventGridManager,
+                _queueManager,
+                _tableManager,
+                _log);
+
+            // Act
+            await serviceLayer.PopulateDomainTopicQueue(parameters);
+
+            // Verify
+            _log.Messages.Should().HaveCount(6);
+            _log.Messages[0].Message.Should().Be("Queuing domain topics for deletion.");
+            _log.Messages[1].Message.Should().Be($"Found {_eventGridManager.ReturnDomainTopicNames[0][0]}");
+            _log.Messages[2].Message.Should().Be($"Found {_eventGridManager.ReturnDomainTopicNames[0][1]}");
+            _log.Messages[3].Message.Should().Be($"Found {_eventGridManager.ReturnDomainTopicNames[0][2]}");
+            _log.Messages[4].Message.Should().Be($"{_eventGridManager.ReturnDomainTopicNames[0].Count} domain topics being added to queue for deletion.");
+            _log.Messages[5].Message.Should().Be("Finished processing page of domain topics.");
+        }
+
+        [Fact]
+        public async Task ServiceLayer_PopulateDomainTopicQueue_MultiplePages_ShouldWork()
+        {
+            // Setup
+            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
+
+            _eventGridManager.ReturnDomainTopicNames = new List<List<string>>()
+            {
+                new List<string>()
+                {
+                    "domaintopic1"
+                },
+                new List<string>()
+                {
+                    "domaintopic2"
+                },
+            };
+
+            ServiceLayer serviceLayer = new ServiceLayer(
+                _eventGridManager,
+                _queueManager,
+                _tableManager,
+                _log);
+
+            // Act
+            await serviceLayer.PopulateDomainTopicQueue(parameters);
+
+            // Verify
+            _log.Messages.Should().HaveCount(5);
+            _log.Messages[0].Message.Should().Be("Queuing domain topics for deletion.");
+            _log.Messages[1].Message.Should().Be($"Found {_eventGridManager.ReturnDomainTopicNames[0][0]}");
+            _log.Messages[2].Message.Should().Be($"{_eventGridManager.ReturnDomainTopicNames[0].Count} domain topics being added to queue for deletion.");
+            _log.Messages[3].Message.Should().Be("Added next domain topic page to queue.");
+            _log.Messages[4].Message.Should().Be("Finished processing page of domain topics.");
+
+            _queueManager.SentMessages.Should().HaveCount(2);
+            _queueManager.SentMessages[1].Should().Contain("\"domainTopicNextPage\":\"Nextpage\"");
+        }
+
+        [Theory]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        public void ServiceLayer_PopulateDomainTopicQueue_EventGridException_ShouldRethrow(bool getClientThrowsException, bool getTopicsThrowsException)
+        {
+            // Setup
+            _eventGridManager.ThrowExceptionOnGetClient = getClientThrowsException;
+            _eventGridManager.ThrowExceptionOnGetTopics = getTopicsThrowsException;
+
+            ServiceLayer serviceLayer = new ServiceLayer(
+                _eventGridManager,
+                _queueManager,
+                _tableManager,
+                _log);
+
+            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
+            Func<Task> act = async () => await serviceLayer.PopulateDomainTopicQueue(parameters);
+
+            // Act
+            act.Should().Throw<RequestFailedException>().WithMessage(_eventGridManager.ExceptionMessage);
+
+            // Verify
+            _log.Messages.Should().HaveCount(2);
+            _log.Messages[0].Message.Should().Be("Queuing domain topics for deletion.");
+            _log.Messages[1].Message.Should().Be("Exception encountered in PopulateDomainTopicQueue method.");
+        }
+
+        [Theory]
+        [MemberData(nameof(GetMockQueueManagerWithException2), MemberType = typeof(ServiceLayer_Tests))]
+        public void ServiceLayer_PopulateDomainTopicQueue_QueueException_ShouldRethrow(Mock<IQueueManager> queueManagerMock, string exceptionMessage)
+        {
+            // Setup
+            ServiceLayer serviceLayer = new ServiceLayer(
+                _eventGridManager,
+                queueManagerMock.Object,
+                _tableManager,
+                _log);
+
+            DataCleanupParameters parameters = TestValues.GetDataCleanupParameters();
+            Func<Task> act = async () => await serviceLayer.PopulateDomainTopicQueue(parameters);
+
+            // Act
+            act.Should().Throw<RequestFailedException>().WithMessage(exceptionMessage);
+
+            // Verify
+            _log.Messages.Should().HaveCountGreaterOrEqualTo(2);
+            _log.Messages[0].Message.Should().Be("Queuing domain topics for deletion.");
+            _log.Messages[_log.Messages.Count - 1].Message.Should().Be("Exception encountered in PopulateDomainTopicQueue method.");
         }
 
         #endregion

@@ -3,7 +3,6 @@ using AzureUtilities.DataCleanup.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -13,7 +12,6 @@ namespace AzureUtilities.DataCleanup
     public class DataCleanup
     {
         private readonly IServiceLayer _serviceLayer;
-
 
         private const string QueueNameToDelete = "domaintopicstodelete";
         private const string QueueNameToList = "domaintopicstolist";
@@ -29,10 +27,10 @@ namespace AzureUtilities.DataCleanup
             [HttpTrigger(AuthorizationLevel.Function, "post")] DataCleanupParameters parameters)
         {
             Task queueDeleteTask = _serviceLayer.DeleteQueues(parameters);
-            //Task tableDeleteTask = _serviceLayer.DeleteTables(parameters);
-            //Task domainTopicQueryTask = _serviceLayer.PopulateDomainTopicQueue(parameters);
+            Task tableDeleteTask = _serviceLayer.DeleteTables(parameters);
+            Task domainTopicQueryTask = _serviceLayer.PopulateDomainTopicQueue(parameters);
 
-            //await Task.WhenAll(queueDeleteTask, tableDeleteTask, domainTopicQueryTask);
+            await Task.WhenAll(queueDeleteTask, tableDeleteTask, domainTopicQueryTask);
 
             return new OkResult();
         }
@@ -44,9 +42,6 @@ namespace AzureUtilities.DataCleanup
             DataCleanupParameters parameters = JsonSerializer.Deserialize<DataCleanupParameters>(queueMessage);
 
             await _serviceLayer.PopulateDomainTopicQueue(parameters);
-
-            //Console.WriteLine("Finished populating delete queue from domain topic page.");
-            //_log.LogDebug("Finished populating delete queue from domain topic page.");
 
             return;
         }

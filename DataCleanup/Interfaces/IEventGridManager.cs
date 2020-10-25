@@ -1,6 +1,5 @@
 ﻿using Microsoft.Azure.Management.EventGrid;
-using Microsoft.Azure.Management.EventGrid.Models;
-using Microsoft.Rest.Azure;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AzureUtilities.DataCleanup.Interfaces
@@ -15,18 +14,15 @@ namespace AzureUtilities.DataCleanup.Interfaces
             string azureManagemernResourceUrl);
 
         Task DeleteDomainTopic(
+            EventGridManagementClient eventGridManagementClient,
             string resourceGroupName,
             string domainName,
-            string domainTopicName,
-            EventGridManagementClient eventGridManagementClient);
+            string domainTopicName);
 
-        Task<AzureOperationResponse<IPage<DomainTopic>>> GetDomainTopics(
-        string resourceGroupName,
-        string domainName,
-        EventGridManagementClient eventGridManagementClient);
-
-        Task<AzureOperationResponse<IPage<DomainTopic>>> GetDomainTopics(
-            string nextPageLink,
-            EventGridManagementClient eventGridManagementClient);
+        Task<(List<string> domainTopicNames, string nextPageLink)> GetDomainTopics(
+            EventGridManagementClient eventGridManagementClient,
+            string resourceGroupName,
+            string domainName,
+            string nextPageLink = null);
     }
 }

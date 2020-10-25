@@ -14,5 +14,9 @@ namespace AzureUtilities.DataCleanup.Interfaces
         Task<List<string>> GetQueues(QueueServiceClient queueServiceClient);
 
         Task DeleteQueue(QueueServiceClient queueServiceClient, string queueName);
+
+        Task CreateIfNotExistsAsync(QueueClient client);
+
+        Task SendMessageAsync(QueueClient client, string message);
     }
 }

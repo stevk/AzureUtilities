@@ -36,7 +36,7 @@ namespace AzureUtilities.DataCleanup.Dto
         [JsonPropertyName("domainTopicName")]
         public string DomainTopicName { get; set; }
 
-        [JsonPropertyName("domainTopicnNextPage")]
+        [JsonPropertyName("domainTopicNextPage")]
         public string DomainTopicNextpage { get; set; }
     }
 }

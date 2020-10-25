@@ -2,7 +2,9 @@ using Azure;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using AzureUtilities.DataCleanup.Interfaces;
+using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace AzureUtilities.DataCleanup.DataLayer
@@ -36,6 +38,22 @@ namespace AzureUtilities.DataCleanup.DataLayer
         public Task DeleteQueue(QueueServiceClient queueServiceClient, string queueName)
         {
             return queueServiceClient.DeleteQueueAsync(queueName);
+        }
+
+        public Task CreateIfNotExistsAsync(QueueClient client)
+        {
+            return client.CreateIfNotExistsAsync();
+        }
+
+        public Task SendMessageAsync(QueueClient client, string message)
+        {
+            return client.SendMessageAsync(Base64Encode(message));
+        }
+
+        private static string Base64Encode(string plainText)
+        {
+            byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
         }
     }
 }

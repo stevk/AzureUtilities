@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json;
 using AzureUtilities.DataCleanup.Dto;
 
@@ -9,7 +8,7 @@ namespace AzureUtilities.DataCleanup.Shared
         // This connection string will parse, but is not valid.
         private const string ConnectionString = "DefaultEndpointsProtocol=https;AccountName=testaccount;AccountKey=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789012345678901234567890123==;EndpointSuffix=core.windows.net";
 
-        public static DataCleanupParameters GetDataCleanupParameters(string nextPage = null)
+        public static DataCleanupParameters GetDataCleanupParameters(string domainTopicName = null, string nextPage = null)
         {
             return new DataCleanupParameters()
             {
@@ -20,7 +19,7 @@ namespace AzureUtilities.DataCleanup.Shared
                 ServicePrincipalClientId = "ServicePrincipalClientId",
                 ServicePrincipalClientKey = "ServicePrincipalClientKey",
                 ServicePrincipalTenantId = "ServicePrincipalTenantId",
-                DomainTopicName = "DomainTopicName",
+                DomainTopicName = domainTopicName,
                 DomainTopicNextpage = nextPage
             };
         }
@@ -34,12 +33,5 @@ namespace AzureUtilities.DataCleanup.Shared
         {
             WriteIndented = true
         };
-
-        public static IEnumerable<object[]> GetTestValues()
-        {
-            yield return new object[] { string.Empty };
-            yield return new object[] { " " };
-            yield return new object[] { null };
-        }
     }
 }

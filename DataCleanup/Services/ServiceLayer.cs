@@ -3,12 +3,9 @@ using AzureUtilities.DataCleanup.Dto;
 using AzureUtilities.DataCleanup.Interfaces;
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.Management.EventGrid;
-using Microsoft.Azure.Management.EventGrid.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.Rest.Azure;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -98,24 +95,22 @@ namespace AzureUtilities.DataCleanup.Services
 
         public async Task DeleteDomainTopic(DataCleanupParameters parameters)
         {
-            EventGridManagementClient eventGridManagementClient = await _eventGridManager.GetEventGridManagementClient(
-                parameters.SubscriptionId,
-                parameters.ServicePrincipalClientId,
-                parameters.ServicePrincipalClientKey,
-                string.Concat(@"https://login.windows.net/", parameters.ServicePrincipalTenantId),
-                @"https://management.azure.com/");
-
             _log.LogDebug($"Deleting domain topic {parameters.DomainTopicName}");
 
             try
             {
+                EventGridManagementClient eventGridManagementClient = await _eventGridManager.GetEventGridManagementClient(
+                    parameters.SubscriptionId,
+                    parameters.ServicePrincipalClientId,
+                    parameters.ServicePrincipalClientKey,
+                    string.Concat(@"https://login.windows.net/", parameters.ServicePrincipalTenantId),
+                    @"https://management.azure.com/");
+            
                 await _eventGridManager.DeleteDomainTopic(
-                        parameters.ResourceGroupName,
-                        parameters.EventGridName,
-                        parameters.DomainTopicName,
-                        eventGridManagementClient);
-
-                _log.LogDebug($"Domain topic deletion completed! {parameters.DomainTopicName}");
+                    eventGridManagementClient,
+                    parameters.ResourceGroupName,
+                    parameters.EventGridName,
+                    parameters.DomainTopicName); 
             }
             catch (Exception ex)
             {
@@ -123,69 +118,60 @@ namespace AzureUtilities.DataCleanup.Services
                 throw;
             }
 
+            _log.LogDebug($"Domain topic deletion completed! {parameters.DomainTopicName}");
+
             return;
         }
 
         public async Task PopulateDomainTopicQueue(DataCleanupParameters parameters)
         {
-            EventGridManagementClient eventGridManagementClient = await _eventGridManager.GetEventGridManagementClient(
-                parameters.SubscriptionId,
-                parameters.ServicePrincipalClientId,
-                parameters.ServicePrincipalClientKey,
-                string.Concat(@"https://login.windows.net/", parameters.ServicePrincipalTenantId),
-                @"https://management.azure.com/");
+            _log.LogDebug("Queuing domain topics for deletion.");
 
             try
             {
-                string storageConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage") ?? throw new ArgumentException();
+                string storageConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage") ?? "UseDevelopmentStorage=true";
                 QueueClient queuePendingDelete = _queueManager.CreateQueueClient(storageConnectionString, QueueNameHoldingDomainTopicsToDelete);
-                await queuePendingDelete.CreateIfNotExistsAsync();
+                await _queueManager.CreateIfNotExistsAsync(queuePendingDelete);
 
-                AzureOperationResponse<IPage<DomainTopic>> lastResult;
-                if (parameters.DomainTopicNextpage == null)
-                {
-                    _log.LogDebug("Getting first page of domain topics.");
-                    lastResult = await _eventGridManager.GetDomainTopics(
-                        parameters.ResourceGroupName,
-                        parameters.EventGridName,
-                        eventGridManagementClient);
-                }
-                else
-                {
-                    _log.LogDebug("Getting next page of domain topics.");
-                    lastResult = await _eventGridManager.GetDomainTopics(
-                        parameters.DomainTopicNextpage,
-                        eventGridManagementClient);
-                }
+                EventGridManagementClient eventGridManagementClient = await _eventGridManager.GetEventGridManagementClient(
+                    parameters.SubscriptionId,
+                    parameters.ServicePrincipalClientId,
+                    parameters.ServicePrincipalClientKey,
+                    string.Concat(@"https://login.windows.net/", parameters.ServicePrincipalTenantId),
+                    @"https://management.azure.com/");
+
+                (List<string> domainTopicNames, string nextPageLink) = await _eventGridManager.GetDomainTopics(
+                    eventGridManagementClient,
+                    parameters.ResourceGroupName,
+                    parameters.EventGridName,
+                    parameters.DomainTopicNextpage);
 
                 var queueAddTasks = new List<Task>();
-                foreach (DomainTopic domainTopic in lastResult.Body)
+                foreach (var domainTopic in domainTopicNames)
                 {
-                    parameters.DomainTopicName = domainTopic.Name;
+                    parameters.DomainTopicName = domainTopic;
                     string deleteMessage = JsonSerializer.Serialize(parameters);
-                    queueAddTasks.Add(queuePendingDelete.SendMessageAsync(Base64Encode(deleteMessage)));
+                    queueAddTasks.Add(_queueManager.SendMessageAsync(queuePendingDelete,deleteMessage));
 
-                    _log.LogDebug($"Found {domainTopic.Name}");
+                    _log.LogDebug($"Found {domainTopic}");
                 }
 
                 _log.LogDebug($"{queueAddTasks.Count} domain topics being added to queue for deletion.");
 
                 // If there is another page of domain topics, then add a task to the queue to parse it.
-                if (lastResult.Body.NextPageLink != null)
+                if (!string.IsNullOrWhiteSpace(nextPageLink))
                 {
                     QueueClient queuePendingList = _queueManager.CreateQueueClient(storageConnectionString, QueueNameHoldingDomainTopicsToList);
-                    await queuePendingList.CreateIfNotExistsAsync();
-                    parameters.DomainTopicNextpage = lastResult.Body.NextPageLink;
+                    await _queueManager.CreateIfNotExistsAsync(queuePendingList);
+                    parameters.DomainTopicNextpage = nextPageLink;
                     parameters.DomainTopicName = null;
                     string nextPageParameters = JsonSerializer.Serialize(parameters);
-                    queueAddTasks.Add(queuePendingList.SendMessageAsync(Base64Encode(nextPageParameters)));
+                    queueAddTasks.Add(_queueManager.SendMessageAsync(queuePendingList, nextPageParameters));
 
-                    _log.LogDebug($"Added next domain topic page to queue.");
+                    _log.LogDebug("Added next domain topic page to queue.");
                 }
 
                 await Task.WhenAll(queueAddTasks);
-
-                _log.LogDebug($"Finished processing page of domain topics.");
             }
             catch (Exception ex)
             {
@@ -193,13 +179,9 @@ namespace AzureUtilities.DataCleanup.Services
                 throw;
             }
 
-            return;
-        }
+            _log.LogDebug("Finished processing page of domain topics.");
 
-        private static string Base64Encode(string plainText)
-        {
-            byte[] plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-            return Convert.ToBase64String(plainTextBytes);
+            return;
         }
     }
 }
