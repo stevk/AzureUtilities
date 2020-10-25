@@ -1,5 +1,4 @@
-﻿using Azure;
-using Azure.Storage.Queues;
+﻿using Azure.Storage.Queues;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

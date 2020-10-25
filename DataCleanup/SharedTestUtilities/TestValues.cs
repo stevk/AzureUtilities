@@ -1,5 +1,5 @@
-using System.Text.Json;
 using AzureUtilities.DataCleanup.Dto;
+using System.Text.Json;
 
 namespace AzureUtilities.DataCleanup.Shared
 {
@@ -24,9 +24,9 @@ namespace AzureUtilities.DataCleanup.Shared
             };
         }
 
-        public static string GetQueueMessageData(string nextPage = null)
+        public static string GetQueueMessageData(string domainTopicName = null, string nextPage = null)
         {
-            return JsonSerializer.Serialize(GetDataCleanupParameters(nextPage), JsonOptions);
+            return JsonSerializer.Serialize(GetDataCleanupParameters(domainTopicName, nextPage), JsonOptions);
         }
 
         internal static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions

@@ -49,7 +49,6 @@ Tables and queues can be deleted quickly, but domains take a long time to delete
 
 ## Roadmap
 
-- Unit tests for controllers.
 - Add blob support.
 - Integration tests.
 - Add callback and status support. (Azure pipeline only allows for short durations on requests before reporting a failure)

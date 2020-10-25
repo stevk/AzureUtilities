@@ -105,12 +105,12 @@ namespace AzureUtilities.DataCleanup.Services
                     parameters.ServicePrincipalClientKey,
                     string.Concat(@"https://login.windows.net/", parameters.ServicePrincipalTenantId),
                     @"https://management.azure.com/");
-            
+
                 await _eventGridManager.DeleteDomainTopic(
                     eventGridManagementClient,
                     parameters.ResourceGroupName,
                     parameters.EventGridName,
-                    parameters.DomainTopicName); 
+                    parameters.DomainTopicName);
             }
             catch (Exception ex)
             {
@@ -151,7 +151,7 @@ namespace AzureUtilities.DataCleanup.Services
                 {
                     parameters.DomainTopicName = domainTopic;
                     string deleteMessage = JsonSerializer.Serialize(parameters);
-                    queueAddTasks.Add(_queueManager.SendMessageAsync(queuePendingDelete,deleteMessage));
+                    queueAddTasks.Add(_queueManager.SendMessageAsync(queuePendingDelete, deleteMessage));
 
                     _log.LogDebug($"Found {domainTopic}");
                 }

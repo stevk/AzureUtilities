@@ -1,5 +1,5 @@
-﻿using System;
-using Microsoft.Azure.Cosmos.Table;
+﻿using Microsoft.Azure.Cosmos.Table;
+using System;
 
 namespace DataCleanup_UnitTests.Mocks
 {

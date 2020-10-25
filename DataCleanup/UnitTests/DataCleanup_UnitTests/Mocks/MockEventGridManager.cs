@@ -24,7 +24,7 @@ namespace DataCleanup_UnitTests.Mocks
                 "domaintopic3"
             }
         };
-        
+
         public Task DeleteDomainTopic(
             EventGridManagementClient eventGridManagementClient,
             string resourceGroupName,

@@ -52,9 +52,9 @@ namespace AzureUtilities.DataCleanup
         {
             DataCleanupParameters parameters = JsonSerializer.Deserialize<DataCleanupParameters>(queueMessage);
 
-            if (string.IsNullOrEmpty(parameters.DomainTopicName))
+            if (string.IsNullOrWhiteSpace(parameters.DomainTopicName))
             {
-                throw new ArgumentException("DomainTopicName value is null or empty.");
+                throw new ArgumentException($"{nameof(parameters.DomainTopicName)} value is invalid.");
             }
 
             await _serviceLayer.DeleteDomainTopic(parameters);
