@@ -11,16 +11,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UnitTests", "UnitTests", "{
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataCleanup_UnitTests", "DataCleanup\UnitTests\DataCleanup_UnitTests\DataCleanup_UnitTests.csproj", "{218A7E0E-BC22-4D2C-B45E-1E91B156DB01}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SharedTestUtilities", "SharedTestUtilities", "{CABD3F23-2EDD-4581-81DC-7A8FE31A3867}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Shared", "DataCleanup\SharedTestUtilities\Shared.csproj", "{72923183-B5D2-430B-9874-97FA0CB80F9C}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Files", "Files", "{10F945F9-BF5A-47DF-8B54-63513C4DAEE5}"
 	ProjectSection(SolutionItems) = preProject
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
 		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataCleanup_IntegrationTests", "DataCleanup\IntegrationTests\DataCleanup_IntegrationTests\DataCleanup_IntegrationTests.csproj", "{C116FF53-FDAA-47D9-9107-3A3ECE651AE6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,17 +34,17 @@ Global
 		{218A7E0E-BC22-4D2C-B45E-1E91B156DB01}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{218A7E0E-BC22-4D2C-B45E-1E91B156DB01}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{218A7E0E-BC22-4D2C-B45E-1E91B156DB01}.Release|Any CPU.Build.0 = Release|Any CPU
-		{72923183-B5D2-430B-9874-97FA0CB80F9C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{72923183-B5D2-430B-9874-97FA0CB80F9C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{72923183-B5D2-430B-9874-97FA0CB80F9C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{72923183-B5D2-430B-9874-97FA0CB80F9C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C116FF53-FDAA-47D9-9107-3A3ECE651AE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C116FF53-FDAA-47D9-9107-3A3ECE651AE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C116FF53-FDAA-47D9-9107-3A3ECE651AE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C116FF53-FDAA-47D9-9107-3A3ECE651AE6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{218A7E0E-BC22-4D2C-B45E-1E91B156DB01} = {8E62EF8F-A069-4669-969F-09CD06A91632}
-		{72923183-B5D2-430B-9874-97FA0CB80F9C} = {CABD3F23-2EDD-4581-81DC-7A8FE31A3867}
+		{C116FF53-FDAA-47D9-9107-3A3ECE651AE6} = {8DCA927E-CF05-47E1-8713-6E8F7CCBFB45}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {207D4DB9-E360-4D69-8869-E214C39F3430}

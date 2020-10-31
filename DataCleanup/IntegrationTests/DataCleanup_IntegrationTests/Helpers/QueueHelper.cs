@@ -2,24 +2,30 @@ using Azure;
 using Azure.Storage.Queues;
 using Azure.Storage.Queues.Models;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace AzureUtilities.DataCleanup.Shared
+namespace DataCleanup_IntegrationTests.Helpers
 {
-    public class StorageQueueHelper
+    public class QueueHelper
     {
-        private static readonly string s_storageConnectionString = Environment.GetEnvironmentVariable("StorageAccountConnectionString") ?? throw new ArgumentException();
+        readonly string StorageConnectionString;
 
-        public static async Task<QueueClient> CreateQueue(string queueName)
+        public QueueHelper(string storageConnectionString)
         {
-            QueueClient queue = new QueueClient(s_storageConnectionString, queueName);
+            StorageConnectionString = storageConnectionString;
+        }
+
+        public async Task<QueueClient> CreateQueue(string queueName)
+        {
+            QueueClient queue = new QueueClient(StorageConnectionString, queueName);
             await queue.CreateIfNotExistsAsync();
             return queue;
         }
 
-        public static QueueClient GetQueueReference(string queueName)
+        public QueueClient GetQueueReference(string queueName)
         {
-            return new QueueClient(s_storageConnectionString, queueName);
+            return new QueueClient(StorageConnectionString, queueName);
         }
 
         public async Task InsertMessageToQueue(string queueName, byte[] payload)
@@ -28,7 +34,7 @@ namespace AzureUtilities.DataCleanup.Shared
             await AddMessage(queueName, message);
         }
 
-        public static async Task AddMessage(string queueName, string message)
+        public async Task AddMessage(string queueName, string message)
         {
             QueueClient queue = await CreateQueue(queueName);
             await queue.SendMessageAsync(message);
@@ -100,6 +106,21 @@ namespace AzureUtilities.DataCleanup.Shared
             }
 
             throw new TimeoutException(timeoutMessage);
+        }
+
+        public async Task<List<string>> GetQueues()
+        {
+            var queueServiceClient = new QueueServiceClient(StorageConnectionString);
+            IAsyncEnumerable<Page<QueueItem>> queuesAsyncEnumerable = queueServiceClient.GetQueuesAsync().AsPages();
+            var result = new List<string>();
+            await foreach (var page in queuesAsyncEnumerable)
+            {
+                foreach (var queueItem in page.Values)
+                {
+                    result.Add(queueItem.Name);
+                }
+            }
+            return result;
         }
     }
 }

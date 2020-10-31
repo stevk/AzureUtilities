@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 
 namespace AzureUtilities.DataCleanup
 {
-    public class DataCleanup
+    public class Functions
     {
         private readonly IServiceLayer _serviceLayer;
 
         private const string QueueNameToDelete = "domaintopicstodelete";
         private const string QueueNameToList = "domaintopicstolist";
 
-        public DataCleanup(IServiceLayer serviceLayer)
+        public Functions(IServiceLayer serviceLayer)
         {
             _serviceLayer = serviceLayer;
 
@@ -27,10 +27,38 @@ namespace AzureUtilities.DataCleanup
             [HttpTrigger(AuthorizationLevel.Function, "post")] DataCleanupParameters parameters)
         {
             Task queueDeleteTask = _serviceLayer.DeleteQueues(parameters);
-            Task tableDeleteTask = _serviceLayer.DeleteTables(parameters);
+            Task tableDeleteTask = DeleteTables(parameters);
             Task domainTopicQueryTask = _serviceLayer.PopulateDomainTopicQueue(parameters);
 
             await Task.WhenAll(queueDeleteTask, tableDeleteTask, domainTopicQueryTask);
+
+            return new OkResult();
+        }
+
+        [FunctionName("DeleteQueues")]
+        public async Task<IActionResult> DeleteQueues(
+            [HttpTrigger(AuthorizationLevel.Function, "post")] DataCleanupParameters parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameters.StorageConnectionString))
+            {
+                return new BadRequestResult();
+            }
+
+            await _serviceLayer.DeleteQueues(parameters);
+
+            return new OkResult();
+        }
+
+        [FunctionName("DeleteTables")]
+        public async Task<IActionResult> DeleteTables(
+            [HttpTrigger(AuthorizationLevel.Function, "post")] DataCleanupParameters parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameters.StorageConnectionString))
+            {
+                return new BadRequestResult();
+            }
+            
+            await _serviceLayer.DeleteTables(parameters);
 
             return new OkResult();
         }
@@ -42,8 +70,6 @@ namespace AzureUtilities.DataCleanup
             DataCleanupParameters parameters = JsonSerializer.Deserialize<DataCleanupParameters>(queueMessage);
 
             await _serviceLayer.PopulateDomainTopicQueue(parameters);
-
-            return;
         }
 
         [FunctionName("DomainTopicCleanup")]
@@ -58,8 +84,6 @@ namespace AzureUtilities.DataCleanup
             }
 
             await _serviceLayer.DeleteDomainTopic(parameters);
-
-            return;
         }
     }
 }

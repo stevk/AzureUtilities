@@ -21,7 +21,7 @@ This tool provides an automated means to restore a Microservice's data to a clea
 
 ## Usage
 
-Send a POST request to the Function with a body that contains the artifacts that are intended to be cleaned up and the credentials needed to act on those artifacts.
+Send a POST request to the Function with a body that contains the artifacts that are intended to be cleaned up and the credentials needed to act on those artifacts. The storage connection string is required for removing queues and tables, while all of the other parameters are required for deleting domains/subscriptions.
 
 Example Request:
 
@@ -47,12 +47,22 @@ The Function will return an OK result after all of the following:
 
 Tables and queues can be deleted quickly, but domains take a long time to delete, so that process is finished asynchronously by the Function.
 
+### Running Integration Tests
+
+Some environment variables are required for running integration tests. If not set by the environment, default values are used that assume local debugging against the development storage.
+
+Two instances of the solution will need to be open for local debugging. One instance runs the function app while the other runs the integration tests. Note that in this scenario that the development storage account is used by the function app and contains the artifacts being deleted. This can cause issues with deleting domains/subscriptions due to the way the function app creates queues during that process.
+
+| Variable | Default Value |
+| --- | --- |
+| BaseEndpoint | [http://localhost:7071/api/](http://localhost:7071/api/) |
+| StorageConnectionString | UseDevelopmentStorage=true |
+
 ## Roadmap
 
 - Add blob support.
-- Integration tests.
+- Domains/subscription related Integration tests.
 - Add callback and status support. (Azure pipeline only allows for short durations on requests before reporting a failure)
 - Improvements to initialize performance involving requests that involve a large number of queues and/or tables.
-- Add functions allowing more granular actions, like clearing only one type of data.
 - Allow blacklisting, E.g. specify a table that is not to be deleted.
 - Add option to clear table and queue contents without deleting the entire structure.

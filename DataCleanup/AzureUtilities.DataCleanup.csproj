@@ -9,10 +9,13 @@
     <PackageId />
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="IntegrationTests\**" />
     <Compile Remove="SharedTestUtilities\**" />
     <Compile Remove="UnitTests\**" />
+    <EmbeddedResource Remove="IntegrationTests\**" />
     <EmbeddedResource Remove="SharedTestUtilities\**" />
     <EmbeddedResource Remove="UnitTests\**" />
+    <None Remove="IntegrationTests\**" />
     <None Remove="SharedTestUtilities\**" />
     <None Remove="UnitTests\**" />
   </ItemGroup>

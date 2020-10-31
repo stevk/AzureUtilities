@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace AzureUtilities.DataCleanup.Shared
+namespace DataCleanup_IntegrationTests.Helpers
 {
-    public class StorageBlobHelper
+    public class BlobHelper
     {
         private static readonly string s_storageConnectionString = Environment.GetEnvironmentVariable("StorageAccountConnectionString") ?? throw new ArgumentException();
 

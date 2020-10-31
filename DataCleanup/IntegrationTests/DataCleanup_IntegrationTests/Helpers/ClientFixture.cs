@@ -1,7 +1,7 @@
 using System;
 using System.Net.Http;
 
-namespace AzureUtilities.DataCleanup.Shared
+namespace DataCleanup_IntegrationTests.Helpers
 {
     public sealed class ClientFixture : IDisposable
     {
